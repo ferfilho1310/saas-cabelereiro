@@ -1,0 +1,100 @@
+
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agendamento - Cabeleireiro</title>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js"></script>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 min-h-screen flex items-center justify-center">
+    <div class="bg-white p-6 rounded shadow-md w-full max-w-md">
+        <h1 class="text-2xl font-bold mb-4 text-center">Agenda do Cabeleireiro</h1>
+        <div id="auth-view">
+            <input id="email" type="email" placeholder="E-mail" class="border p-2 mb-2 w-full">
+            <input id="password" type="password" placeholder="Senha" class="border p-2 mb-2 w-full">
+            <button onclick="signUp()" class="bg-green-500 text-white px-4 py-2 rounded w-full mb-2">Cadastrar</button>
+            <button onclick="signIn()" class="bg-blue-500 text-white px-4 py-2 rounded w-full">Entrar</button>
+        </div>
+        <div id="agenda-view" class="hidden">
+            <form id="appointmentForm" class="mb-4">
+                <input id="nome" type="text" placeholder="Nome" class="border p-2 mb-2 w-full" required>
+                <input id="telefone" type="tel" placeholder="Telefone" class="border p-2 mb-2 w-full" required>
+                <input id="data" type="date" class="border p-2 mb-2 w-full" required>
+                <input id="hora" type="time" class="border p-2 mb-2 w-full" required>
+                <textarea id="observacao" placeholder="Observações (opcional)" class="border p-2 mb-2 w-full"></textarea>
+                <button type="submit" class="bg-indigo-500 text-white px-4 py-2 rounded w-full">Agendar</button>
+            </form>
+            <h2 class="text-xl font-semibold mb-2">Próximos Agendamentos</h2>
+            <ul id="appointmentsList" class="space-y-2"></ul>
+            <button onclick="logout()" class="bg-red-500 text-white px-4 py-2 rounded w-full mt-4">Sair</button>
+        </div>
+    </div>
+    <script>
+        const SUPABASE_URL = "https://YOUR-PROJECT.supabase.co";
+        const SUPABASE_ANON_KEY = "YOUR-ANON-KEY";
+        const supabaseClient = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+        async function signUp() {
+            const email = document.getElementById("email").value;
+            const password = document.getElementById("password").value;
+            const { user, error } = await supabaseClient.auth.signUp({ email, password });
+            if (error) alert(error.message);
+            else alert("Cadastro realizado com sucesso!");
+        }
+
+        async function signIn() {
+            const email = document.getElementById("email").value;
+            const password = document.getElementById("password").value;
+            const { data, error } = await supabaseClient.auth.signInWithPassword({ email, password });
+            if (error) alert(error.message);
+            else showAgenda();
+        }
+
+        function showAgenda() {
+            document.getElementById("auth-view").classList.add("hidden");
+            document.getElementById("agenda-view").classList.remove("hidden");
+            loadAppointments();
+        }
+
+        async function logout() {
+            await supabaseClient.auth.signOut();
+            document.getElementById("auth-view").classList.remove("hidden");
+            document.getElementById("agenda-view").classList.add("hidden");
+        }
+
+        async function loadAppointments() {
+            const { data, error } = await supabaseClient.from("appointments").select("*").order("data", { ascending: true });
+            if (error) {
+                alert("Erro ao carregar agendamentos");
+                return;
+            }
+            const list = document.getElementById("appointmentsList");
+            list.innerHTML = "";
+            data.forEach(item => {
+                const li = document.createElement("li");
+                li.className = "border p-2 rounded";
+                li.innerText = `${item.nome} - ${item.telefone} - ${item.data} ${item.hora} (${item.observacao || ""})`;
+                list.appendChild(li);
+            });
+        }
+
+        document.getElementById("appointmentForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const nome = document.getElementById("nome").value;
+            const telefone = document.getElementById("telefone").value;
+            const data = document.getElementById("data").value;
+            const hora = document.getElementById("hora").value;
+            const observacao = document.getElementById("observacao").value;
+            const { error } = await supabaseClient.from("appointments").insert([{ nome, telefone, data, hora, observacao }]);
+            if (error) alert("Erro ao salvar agendamento");
+            else {
+                alert("Agendamento salvo!");
+                loadAppointments();
+                e.target.reset();
+            }
+        });
+    </script>
+</body>
+</html>
